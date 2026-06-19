@@ -1,0 +1,13 @@
+# Development overlay.
+#
+# The base values.yaml already targets the dev host (harbor-dev.rrobinson.me) with
+# modest PVCs and single replicas, so this overlay only needs dev-specific tweaks.
+# Kept as an explicit file for symmetry with the other services and so the ArgoCD
+# `harbor-dev` Application can layer `values.yaml` + `values.development.yaml`.
+
+harbor:
+  # Dev keeps Trivy on but you can flip this off to save CPU/RAM on the dev node.
+  trivy:
+    enabled: true
+
+  logLevel: debug

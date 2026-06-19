@@ -1,0 +1,41 @@
+# Production overlay — overrides the dev defaults in values.yaml.
+# Applied by the ArgoCD `harbor-prod` Application as the second values file.
+
+harbor:
+  expose:
+    tls:
+      secret:
+        secretName: harbor.rrobinson.me-tls
+    ingress:
+      hosts:
+        core: harbor.rrobinson.me
+
+  externalURL: https://harbor.rrobinson.me
+
+  # Larger registry/scanner volumes for prod. (PVCs can only grow, not shrink —
+  # pick these deliberately; resizing later requires an expandable StorageClass.)
+  persistence:
+    persistentVolumeClaim:
+      registry:
+        size: 100Gi
+      database:
+        size: 10Gi
+      redis:
+        size: 2Gi
+      trivy:
+        size: 20Gi
+
+  # Scale the stateless tiers for prod. Internal Postgres/Redis stay single-replica;
+  # move to external DB/Redis for true HA when needed.
+  portal:
+    replicas: 2
+  core:
+    replicas: 2
+  jobservice:
+    replicas: 2
+  registry:
+    replicas: 2
+  nginx:
+    replicas: 2
+
+  logLevel: info

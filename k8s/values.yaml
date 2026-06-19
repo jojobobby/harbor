@@ -1,0 +1,113 @@
+# Base values for the harbor-stack umbrella chart.
+#
+# Everything Harbor-specific lives under the `harbor:` key — that is the name of the
+# vendored subchart (charts/harbor-1.19.1.tgz), so Helm routes these overrides into it.
+#
+# These base values describe a complete, dev-deployable Harbor. The per-environment
+# overlays applied by the ArgoCD Application layer on top:
+#   - values.development.yaml  (dev tweaks; host already dev here)
+#   - values.production.yaml   (prod host, TLS secret, bigger PVCs, HA replicas)
+
+harbor:
+  # ---------------------------------------------------------------------------
+  # Ingress / exposure — haproxy ingress + cert-manager TLS, matching the other
+  # rrobinson.me services (see realmhub / cosmic charts).
+  # ---------------------------------------------------------------------------
+  expose:
+    type: ingress
+    tls:
+      enabled: true
+      # cert-manager issues the cert into the named secret via the ingress
+      # annotation below; the chart just references it.
+      certSource: secret
+      secret:
+        secretName: harbor-dev.rrobinson.me-tls
+    ingress:
+      className: haproxy
+      controller: default
+      hosts:
+        core: harbor-dev.rrobinson.me
+      # Replace the upstream nginx-centric defaults with haproxy + cert-manager.
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-prod
+        # Registry layer push/pull can be slow & large — give it generous timeouts.
+        haproxy.org/timeout-client: "600s"
+        haproxy.org/timeout-server: "600s"
+        haproxy.org/timeout-connect: "30s"
+      labels: {}
+
+  # Public URL Harbor advertises in docker/helm login hints and token service.
+  # Must match expose.ingress.hosts.core.
+  externalURL: https://harbor-dev.rrobinson.me
+
+  # ---------------------------------------------------------------------------
+  # Secrets — NEVER commit real values. The admin password and the 16-char
+  # encryption secretKey come from a Secret you create per namespace.
+  # See k8s/secret.example.yaml for the exact shape.
+  # ---------------------------------------------------------------------------
+  existingSecretAdminPassword: harbor-core-secret
+  existingSecretAdminPasswordKey: HARBOR_ADMIN_PASSWORD
+  # When set, the chart reads key `secretKey` from this same secret.
+  existingSecretSecretKey: harbor-core-secret
+
+  # ---------------------------------------------------------------------------
+  # Persistence — k3s ships the `local-path` provisioner as the default
+  # StorageClass, so leave storageClass empty to use it. PVCs are kept on
+  # uninstall so a re-sync never wipes the registry.
+  # ---------------------------------------------------------------------------
+  persistence:
+    enabled: true
+    resourcePolicy: keep
+    persistentVolumeClaim:
+      registry:
+        storageClass: ""
+        size: 20Gi
+      jobservice:
+        jobLog:
+          storageClass: ""
+          size: 1Gi
+      database:
+        storageClass: ""
+        size: 2Gi
+      redis:
+        storageClass: ""
+        size: 1Gi
+      trivy:
+        storageClass: ""
+        size: 5Gi
+    imageChartStorage:
+      type: filesystem
+
+  # ---------------------------------------------------------------------------
+  # Bundled Postgres + Redis (internal) for a self-contained install. Swap to
+  # external (e.g. the cluster's cnpg Postgres) later if HA is needed.
+  # ---------------------------------------------------------------------------
+  database:
+    type: internal
+  redis:
+    type: internal
+
+  # Trivy vulnerability scanner on by default.
+  trivy:
+    enabled: true
+
+  # Disable internal component-to-component TLS (ingress terminates TLS at the edge).
+  internalTLS:
+    enabled: false
+
+  logLevel: info
+
+  updateStrategy:
+    type: RollingUpdate
+
+  # Single replicas in the base/dev profile; prod overlay scales the stateless tiers.
+  portal:
+    replicas: 1
+  core:
+    replicas: 1
+  jobservice:
+    replicas: 1
+  registry:
+    replicas: 1
+  nginx:
+    replicas: 1

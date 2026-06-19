@@ -1,0 +1,11 @@
+harbor-stack ({{ .Chart.AppVersion }}) deployed by ArgoCD.
+
+  Release:    {{ .Release.Name }}
+  Namespace:  {{ .Release.Namespace }}
+  URL:        {{ .Values.harbor.externalURL }}
+
+Default admin user is `admin`; its password comes from the `harbor-core-secret`
+Secret (key HARBOR_ADMIN_PASSWORD) in this namespace.
+
+Login from docker once the cert is issued:
+  docker login {{ .Values.harbor.expose.ingress.hosts.core }}

@@ -1,0 +1,22 @@
+apiVersion: v2
+name: harbor-stack
+description: >-
+  Tidan-managed umbrella chart that deploys Harbor (the goharbor container registry)
+  onto the shared k3s cluster via ArgoCD. The upstream goharbor `harbor` chart is
+  vendored as a subchart under charts/ and configured for haproxy ingress + cert-manager
+  on rrobinson.me. All Harbor config lives under the `harbor:` key in values.
+type: application
+# Version of THIS umbrella wrapper. Bump on values/structure changes.
+version: 0.1.0
+# Tracks the vendored Harbor app version (charts/harbor-1.19.1.tgz -> Harbor 2.15.1).
+appVersion: "2.15.1"
+
+# NOTE on the subchart:
+# The upstream `harbor` chart (v1.19.1, appVersion 2.15.1) is VENDORED as a packaged
+# subchart at charts/harbor-1.19.1.tgz. It is intentionally NOT listed under
+# `dependencies:` so ArgoCD never needs to run `helm dependency build` (no network /
+# Chart.lock required at sync time) — Helm auto-loads any chart found in charts/.
+#
+# To upgrade Harbor: drop the new tgz from https://helm.goharbor.io into charts/,
+# delete the old one, bump appVersion above, and reconcile values against the new
+# upstream values.yaml. See k8s/README.md.
