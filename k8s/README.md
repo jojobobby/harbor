@@ -84,7 +84,9 @@ Both point at `git@github.com:jojobobby/harbor.git`, `path: k8s`, releaseName `h
 ## Upgrading Harbor
 
 1. Download the new chart from <https://helm.goharbor.io> into `charts/` and delete the
-   old tgz: `curl -sLO https://helm.goharbor.io/harbor-<ver>.tgz`.
+   old tgz: `curl -sLo charts/harbor-<ver>.tgz https://helm.goharbor.io/harbor-<ver>.tgz`
+   (note `-o charts/...` — plain `-O` from `k8s/` drops the tgz next to Chart.yaml where
+   Helm ignores it, and the whole Harbor stack silently vanishes from the render).
 2. Bump `appVersion` in `Chart.yaml` to the new Harbor app version.
 3. Diff the new upstream `values.yaml` against ours and reconcile any renamed/removed keys.
 4. Re-render with `helm template` to confirm, commit, push — ArgoCD rolls it out.
